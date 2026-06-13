@@ -1,72 +1,72 @@
-# Course Selection Engine
+# 选课引擎
 
-An asynchronous automation tool for course registration, inquiry, and session management. This engine is designed to handle state-heavy legacy systems by simulating required navigation paths and maintaining persistent session states.
+一个用于课程注册、查询和会话管理的异步自动化工具。本引擎专为处理状态复杂的遗留系统而设计，通过模拟必要的导航路径并维护持久会话状态来实现自动化操作。
 
-## Technical Context
-The system requires specific session activation sequences to prevent server-side errors. For a detailed technical analysis of the underlying access logic, refer to: [about_access_permissions.md](about_access_permissions.md).
+## 技术背景
+系统需要特定的会话激活序列以防止服务端错误。关于底层访问逻辑的详细技术分析，请参阅：[about_access_permissions.md](about_access_permissions.md)。
 
-## Installation
+## 安装
 
-This project requires Python 3.12+ and uses `uv` for dependency management.
+本项目需要 Python 3.12+ 并使用 `uv` 进行依赖管理。
 
-1. Install the environment and dependencies:
+1. 安装环境和依赖：
 ```bash
 uv sync
 ```
 
-## Configuration Guide
+## 配置指南
 
-Configuration is managed via `config.toml`. Copy the template to begin:
+配置通过 `config.toml` 文件管理。从模板开始：
 ```bash
 cp config.toml.example config.toml
 ```
 
-### 1. Account Cookies
-Required for all operations.
-- **How to obtain**: Open the course system in a browser, press `F12`, and navigate to **Application** -> **Storage** -> **Cookies**.
-- **Values**: Copy the values for `JSESSIONID` and `SERVERNAME`.
-- **Expiry**: If the script returns `302` redirects, your cookies have expired and must be updated in `config.toml`.
+### 1. 账号 Cookie
+所有操作的必要前提。
+- **获取方式**：在浏览器中打开选课系统，按 `F12`，导航至 **Application** -> **Storage** -> **Cookies**。
+- **所需值**：复制 `JSESSIONID` 和 `SERVERNAME` 的值。
+- **过期处理**：若脚本返回 `302` 跳转，说明 Cookie 已过期，需在 `config.toml` 中更新。
 
-### 2. Identifying the Profile ID
-The `profileId` is a prerequisite for both inquiry and selection.
-- **How to obtain**: Log in to the course system manually and enter the course selection module. Check the browser address bar for the URL; the `profileId` is the numeric value following the `profileId=` parameter.
-- **Usage**: Enter this ID in `INQUIRY_USER_DATA` to enable searching, and in `USER_CONFIGS` for registration.
+### 2. 获取 Profile ID
+`profileId` 是查询和选课的必要参数。
+- **获取方式**：手动登录选课系统并进入选课模块，查看浏览器地址栏中的 URL，`profileId` 即为 `profileId=` 参数后面的数字。
+- **使用方法**：将此 ID 填入 `INQUIRY_USER_DATA` 以启用搜索功能，以及填入 `USER_CONFIGS` 用于注册。
 
-### 3. Fetching Course Information
-With valid cookies and a `profileId`, use the inquiry tool to retrieve specific course details.
-- **Command**: `uv run main.py --inquire`
-- **Function**: This command retrieves course names, teacher information, current enrollment status, and the unique **Course ID**.
-- **Alternative**: Course IDs can also be obtained by inspecting network traffic via browser developer tools (**F12**), though using the `--inquire` function is recommended for efficiency.
-- **Usage**: Copy the **Course ID** from the inquiry results into the `course_ids` list under `USER_CONFIGS` for the registration process.
+### 3. 获取课程信息
+在 Cookie 和 `profileId` 有效的情况下，使用查询工具获取具体课程信息。
+- **命令**：`uv run main.py --inquire`
+- **功能**：该命令可获取课程名称、教师信息、当前选课人数以及唯一的**课程 ID**。
+- **替代方式**：课程 ID 也可通过浏览器开发者工具（**F12**）抓包获取，但推荐使用 `--inquire` 功能以提高效率。
+- **使用方法**：将查询结果中的**课程 ID** 复制到 `USER_CONFIGS` 下的 `course_ids` 列表中用于注册。
 
-### 4. Proxy and Network Environments
-Configuration of the `USE_PROXY` setting depends on your connection method:
-- **Official VPN (EasyConnect) or Campus Network**: These environments usually provide a direct route to the server, requiring `USE_PROXY` to be set to `False`.
-- **Third-party VPNs (e.g., EasierConnect)**: These environments often require a SOCKS5 proxy to route traffic. Set `USE_PROXY` to `True` and specify the proxy server address and port within the `proxies` dictionary in `config.toml`.
+### 4. 代理与网络环境
+`USE_PROXY` 的配置取决于您的连接方式：
+- **官方 VPN（EasyConnect）或校园网**：这些环境通常可直连服务器，需将 `USE_PROXY` 设为 `False`。
+- **第三方 VPN（如 EasierConnect）**：这些环境通常需要 SOCKS5 代理来转发流量。将 `USE_PROXY` 设为 `True`，并在 `config.toml` 的 `proxies` 字典中指定代理服务器地址和端口。
 
-### 5. API Parameters
-Configure `ENROLLMENT_DATA_API_PARAMS` with the correct `projectId` and `semesterId`.
-- **How to obtain**: Open the browser developer tools (`F12`), switch to the **Network** tab, and refresh the course system page. Search for `projectId` or `semesterId` within the captured requests to find the values for the current academic term.
+### 5. API 参数
+在 `ENROLLMENT_DATA_API_PARAMS` 中配置正确的 `projectId` 和 `semesterId`。
+- **获取方式**：打开浏览器开发者工具（`F12`），切换到 **Network** 标签页，刷新选课系统页面，在捕获的请求中搜索 `projectId` 或 `semesterId` 以获取当前学期的值。
 
-## Usage
+## 使用方法
 
-Commands are executed via `uv run main.py <command>`.
+命令通过 `uv run main.py <命令>` 执行。
 
-### Available Commands
-- `--start` : Executes the registration process for all users defined in `USER_CONFIGS`.
-  - `--endless`: Optional flag to retry indefinitely until successful. Used for sniping courses as they become available.
-- `--inquire`: Interactive mode to search for courses and check enrollment status. Requires a valid `profileId`.
-- `--validate`: Batch verification of cookie validity for all accounts.
-- `--check`: Real-time verification of course capacity and current enrollment status for courses in your config.
-- `--help`: Displays the command help menu.
+### 可用命令
+- `--start`：对 `USER_CONFIGS` 中定义的所有用户执行选课流程。
+  - `--endless`：可选参数，无限重试直到成功。用于抢课。
+- `--inquire`：交互模式，用于搜索课程和查询选课状态。需要有效的 `profileId`。
+- `--validate`：批量验证所有账号的 Cookie 有效性。
+- `--check`：实时验证配置中课程的容量和当前选课状态。
+- `--help`：显示命令帮助菜单。
 
-## Characteristics
+## 特性
 
-- **Asynchronous Concurrency**: Built with `asyncio` and `aiohttp` for efficient multi-account management.
-- **Session Activation**: Automated pre-access routine to satisfy server-side state requirements.
-- **Rate Limit Protection**: Implements sequential activation and task interleaving to avoid triggering IP or session-based frequency limits.
-- **Data Sanitization**: Built-in recovery for non-standard JSON responses from legacy endpoints.
+- **异步并发**：基于 `asyncio` 和 `aiohttp` 构建，高效管理多账号。
+- **会话激活**：自动化预访问流程，满足服务端状态要求。
+- **频率限制保护**：通过顺序激活和任务交错，避免触发基于 IP 或会话的频率限制。
+- **数据修复**：内置针对遗留接口非标准 JSON 响应的恢复机制。
 
-## Maintenance and Safety
-- **SSL**: Verification is disabled by default to accommodate internal network certificate issues.
-- **Termination**: Use `Ctrl+C` to stop the process safely.
+## 维护与安全
+- **SSL**：默认禁用证书验证，以兼容内网证书问题。
+- **终止**：使用 `Ctrl+C` 安全停止进程。

@@ -1,10 +1,7 @@
 import sys
 from pathlib import Path
+import tomllib  # Python 3.11+ standard library
 
-try:
-    import tomllib  # Python 3.11+ standard library
-except ModuleNotFoundError:
-    import tomli as tomllib  # Fallback to tomli (unlikely for Python 3.12+ projects)
 
 
 def load_config() -> dict:

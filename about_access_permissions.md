@@ -1,31 +1,31 @@
-# Technical Analysis: Logic and Characteristics of the Access System
+# 技术分析：访问系统的逻辑与特性
 
-This document provides a formal summary of the underlying technical logic and characteristics implemented to interface with the target state-heavy management platform.
+本文档对与目标状态复杂型管理平台交互所实现的底层技术逻辑与特性进行正式梳理。
 
-## 1. Contextual Sequence Activation (Sequential Navigation)
-The target system employs a non-RESTful, state-dependent architecture where specific server-side "contexts" must be activated before data operations can occur.
-- **Obstacle**: Direct requests to functional endpoints result in session errors or 500-range status codes because the server lacks the necessary navigation history.
-- **Solution**: The system implements a linear warm-up protocol. By sequentially invoking the Entry Portal, the Profile Initialization endpoint, and the Data Synchronization endpoint, it forces the server-side state machine to bind the user's session to a specific operational context (Profile ID).
+## 1. 上下文序列激活（顺序导航）
+目标系统采用非 RESTful 的状态依赖架构，数据操作执行前必须激活特定的服务端"上下文"。
+- **障碍**：直接请求功能性端点会导致会话错误或 5xx 状态码，原因是服务器缺少必要的导航历史记录。
+- **解决方案**：系统实现了一套线性预热协议——依次调用入口门户（Entry Portal）、档案初始化端点（Profile Initialization）和数据同步端点（Data Synchronization），强制服务端状态机将用户会话绑定到特定的操作上下文（Profile ID）。
 
-## 2. Stateless-to-Stateful Session Management
-The system transforms asynchronous, stateless HTTP clients into state-aware agents using persistent session containers.
-- **Logic**: Utilizing `aiohttp.ClientSession`, the system maintains a consistent `JSESSIONID` and header state across multiple requests.
-- **Performance**: By executing the activation sequence and the high-frequency execution loop within the same session, the system benefits from TCP connection reuse (Keep-Alive), minimizing latency during time-sensitive operations.
+## 2. 无状态到有状态的会话管理
+系统通过持久化会话容器，将异步无状态 HTTP 客户端转化为状态感知代理。
+- **逻辑**：利用 `aiohttp.ClientSession`，系统在多次请求间维护一致的 `JSESSIONID` 和请求头状态。
+- **性能**：在同一会话内执行激活序列和高频执行循环，系统可复用 TCP 连接（Keep-Alive），从而在时间敏感操作中最大程度降低延迟。
 
-## 3. Adaptive Structural Polymorphism
-The system is designed to handle heterogeneous data structures while maintaining a unified activation logic.
-- **Characteristics**: The logic identifies the configuration type—distinguishing between complex "Selection Tables" and flat "Inquiry Lists"—to dynamically discover and activate multiple Profile IDs. This allows a single account to hold multiple valid server-side contexts concurrently.
+## 3. 自适应结构多态性
+系统在保持统一激活逻辑的同时，能够处理异构数据结构。
+- **特性**：逻辑层识别配置类型——区分复杂的"选课表"与扁平的"查询列表"——以动态发现并激活多个 Profile ID，使单个账号可以同时持有多个有效的服务端上下文。
 
-## 4. Interleaved Task Scheduling
-To optimize throughput and bypass rate-limiting heuristics, the system implements an interleaved queuing mechanism.
-- **Mechanism**: Instead of processing course tasks in a strict linear order per user, the system interleaves tasks from different sub-tables. 
-- **Efficiency**: This distribution prevents the engine from hammering a single endpoint with identical parameters in rapid succession, reducing the footprint of the automation while maintaining high concurrency via asynchronous coroutines.
+## 4. 交错任务调度
+为优化吞吐量并规避频率限制启发式检测，系统实现了交错排队机制。
+- **机制**：系统不按用户严格线性顺序处理课程任务，而是将来自不同子表的任务交错排列。
+- **效率**：这种分散方式防止引擎在短时间内以相同参数密集轰炸同一端点，在通过异步协程维持高并发的同时降低了自动化操作的特征暴露。
 
-## 5. Decision-Based Execution Resilience
-The system distinguishes between terminal errors and transient state-based obstacles.
-- **Standard Mode**: Recognizes definitive failure signals (e.g., "Full Capacity" or "Conflict") to terminate tasks and preserve resources.
-- **Persistent Sniper Mode**: Redefines transient failures as retryable states. It implements an "Endless" logic that pushes failed tasks back into a double-ended queue, allowing for indefinite retries until the server-side state changes (e.g., a slot becomes available).
+## 5. 基于判断的执行韧性
+系统区分不可恢复的终态错误与可重试的瞬态障碍。
+- **标准模式**：识别明确的失败信号（如"名额已满"或"时间冲突"），终止任务并释放资源。
+- **持续抢课模式（Sniper Mode）**：将瞬态失败重定义为可重试状态。实现"无限循环"逻辑，将失败任务重新压入双端队列，支持无限重试，直至服务端状态发生变化（例如出现空余名额）。
 
-## 6. Heuristic JSON Recovery
-The target system's legacy endpoints often return non-standard or malformed JSON data.
-- **Solution**: The system includes a heuristic parsing layer that utilizes regex-based sanitization to fix unquoted keys and non-standard delimiters, ensuring data integrity even when the target platform deviates from standard API protocols.
+## 6. 启发式 JSON 修复
+目标系统的遗留端点经常返回非标准或格式错误的 JSON 数据。
+- **解决方案**：系统包含一个启发式解析层，利用基于正则表达式的数据清洗来修复未加引号的键名和非标准分隔符，确保即使目标平台偏离标准 API 协议，数据完整性也能得到保障。
