@@ -37,9 +37,7 @@ cp config.toml.example config.toml
 - **使用方法**：将查询结果中的**课程 ID** 复制到 `USER_CONFIGS` 下的 `course_ids` 列表中用于注册。
 
 ### 4. 代理与网络环境
-`USE_PROXY` 的配置取决于您的连接方式：
-- **官方 VPN（EasyConnect）或校园网**：这些环境通常可直连服务器，需将 `USE_PROXY` 设为 `False`。
-- **第三方 VPN（如 EasierConnect）**：这些环境通常需要 SOCKS5 代理来转发流量。将 `USE_PROXY` 设为 `True`，并在 `config.toml` 的 `proxies` 字典中指定代理服务器地址和端口。
+- **EasierConnect**：这些环境通常需要 SOCKS5 代理来转发流量。将 `USE_PROXY` 设为 `True`，并在 `config.toml` 的 `proxies` 字典中指定代理服务器地址和端口。
 
 
 ## 使用方法
