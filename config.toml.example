@@ -8,7 +8,7 @@ all = "socks5://127.0.0.1:114514"
 # User Selection Configurations
 # ============================================================
 
-# -------------------- User: Alice --------------------
+# -------------------- FirstUser= --------------------
 [[USER_CONFIGS]]
 label = "User_Alice"
 
@@ -28,11 +28,8 @@ label = "User_Alice"
     "COURSEID_B2",
   ]
 
-  [USER_CONFIGS.cookies]
-  JSESSIONID = "ALICE_SESSION_ID_HERE"
-  SERVERNAME = "c1"
 
-# -------------------- User: Bob --------------------
+# -------------------- SecondUser --------------------
 [[USER_CONFIGS]]
 label = "User_Bob"
 
@@ -43,26 +40,10 @@ label = "User_Bob"
     "COURSEID_C2",
   ]
 
-  [USER_CONFIGS.cookies]
-  JSESSIONID = "BOB_SESSION_ID_HERE"
-  SERVERNAME = "c2"
-
 # ============================================================
 # Inquiry Configuration
 # ============================================================
 
 [INQUIRY_USER_DATA]
-label = "DefaultInquiryUser"
+label = "TheFirstUser"
 profileId = ["114", "514", "1919", "810"]
-
-  [INQUIRY_USER_DATA.cookies]
-  JSESSIONID = "YOUR_INQUIRY_JSESSIONID_HERE"
-  SERVERNAME = "YOUR_INQUIRY_SERVERNAME_HERE"
-
-# ============================================================
-# API Parameters
-# ============================================================
-
-[ENROLLMENT_DATA_API_PARAMS]
-projectId = "1"
-semesterId = "114514"

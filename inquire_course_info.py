@@ -1,6 +1,4 @@
 import asyncio
-import csv
-import os
 import aiohttp
 import json
 import re
@@ -181,22 +179,23 @@ async def get_enrollment_data(session: aiohttp.ClientSession, inquiry_cookies: d
         return None
 
 
-def filter_courses(courses: list, keyword: str, enrollments: dict):
+def filter_courses(courses: list, keyword: str):
     filtered_courses_list = []
-    # Check if keyword is in "key=value" format
     if "=" in keyword:
         key, value = keyword.split("=", 1)
         key = key.strip().lower()
         value = value.strip().lower()
     else:
-        key = "name"  # Default to searching name
+        key = "name"
         value = keyword.lower()
     for course in courses:
         search_field = str(course.get(key, "")).lower()
         if value in search_field:
-            lesson_id = str(course["id"])
-            sc = enrollments.get(lesson_id, {}).get("sc", "N/A")
-            lc = enrollments.get(lesson_id, {}).get("lc", "N/A")
+            sc = course.get("sc", None)
+            lc = course.get("lc", None)
+            remaining = int(lc - sc) if (sc != "" and lc != "") else "N/A"
+            if isinstance(remaining, int) and remaining <= 0:
+                continue
             filtered_courses_list.append(
                 {
                     "id": course["id"],
@@ -205,8 +204,7 @@ def filter_courses(courses: list, keyword: str, enrollments: dict):
                     "credits": course["credits"],
                     "type": course["type"],
                     "teacher": course["teacher"],
-                    "enrolled": sc,
-                    "limit": lc,
+                    "remaining": remaining,
                 }
             )
     return filtered_courses_list
@@ -253,7 +251,6 @@ async def inquire_course_info():
             print("Could not fetch any course data. Exiting inquiry.")
             return
 
-        # Rename keys in course data
         key_mapping = {
             "id": "id",
             "no": "no",
@@ -261,14 +258,10 @@ async def inquire_course_info():
             "credits": "credits",
             "courseTypeName": "type",
             "teachers": "teacher",
+            "stdCount": "sc",
+            "limitCount": "lc",
         }
         all_courses = [{new_key: course.get(old_key, "") for old_key, new_key in key_mapping.items()} for course in all_courses]
-
-        print("Fetching enrollment data...")
-        enrollments = await get_enrollment_data(session, inquiry_cookies)
-        if not enrollments:
-            print("Could not fetch enrollment data. Exiting inquiry.")
-            return
 
         print("\n--- Course Inquiry Ready ---")
         while True:
@@ -277,79 +270,18 @@ async def inquire_course_info():
                 print("Exiting course inquiry.")
                 break
 
-            filtered = filter_courses(all_courses, keyword, enrollments)
+            filtered = filter_courses(all_courses, keyword)
             if filtered:
                 filtered.sort(key=lambda x: (x["type"], -x["credits"], x["id"]))
                 print("\nThe matching course information is as follows:")
                 for course_item in filtered:
                     print(
                         f"ID: {course_item['id']}, No: {course_item['no']}, Type: {course_item['type']}, "
-                        f"Credits: {course_item['credits']}, Enrolled: {course_item['enrolled']}/{course_item['limit']}, "
+                        f"Credits: {course_item['credits']}, Remaining: {course_item['remaining']}, "
                         f"Name: {course_item['name']}, Teacher: {course_item['teacher']}"
                     )
                 print(f"{len(filtered)} matching courses in total.\n")
 
-                export_choice = input("Do you want to export the filtered courses to a CSV file? (y/n): ").strip().lower()
-                if export_choice == "y":
-                    file_path = input("Enter the file path to save the CSV (relative or absolute, e.g., 'courses.csv' or '/path/to/courses.csv'): ").strip()
-                    if not file_path.endswith(".csv"):
-                        file_path += ".csv"
-                    file_path = os.path.abspath(file_path)
-                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                    fieldnames = sorted(filtered[0].keys())
-                    try:
-                        with open(file_path, "w", newline="", encoding="utf-8-sig") as csvfile:
-                            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-                            writer.writeheader()
-                            writer.writerows(filtered)
-                        print(f"Successfully exported {len(filtered)} filtered courses to {file_path}\n")
-                    except Exception as e:
-                        print(f"Error writing to file {file_path}: {str(e)}\n")
-
-                # Add course to config
-                add_choice = input("Do you want to add any course to config.toml? (y/n): ").strip().lower()
-                if add_choice == "y":
-                    from config_loader import add_course_to_config, list_user_configs
-
-                    # List available user configs
-                    users = list_user_configs()
-                    if not users:
-                        print("No user configurations found in config.toml")
-                        continue
-
-                    print("\nAvailable user configurations:")
-                    user_map = {}
-                    idx = 1
-                    for user in users:
-                        for table in user["tables"]:
-                            print(f"  [{idx}] {user['label']} - profileId: {table['profileId']}")
-                            user_map[idx] = (user['label'], table['profileId'])
-                            idx += 1
-
-                    # User selection
-                    try:
-                        choice_idx = int(input("Select user configuration [number]: ").strip())
-                        if choice_idx not in user_map:
-                            print("Invalid selection")
-                            continue
-
-                        selected_label, selected_profile_id = user_map[choice_idx]
-
-                        # Enter course ID
-                        course_id = input("Enter course ID to add: ").strip()
-
-                        # Verify course ID is in current query results
-                        if not any(str(c["id"]) == course_id for c in filtered):
-                            print(f"Error: Course ID {course_id} not found in current filtered results")
-                            continue
-
-                        # Add to config
-                        add_course_to_config(selected_label, selected_profile_id, course_id)
-
-                    except ValueError:
-                        print("Invalid input, skipping add operation")
-                    except KeyboardInterrupt:
-                        print("\nAdd operation cancelled")
 
             else:
                 print("No matching course found.")

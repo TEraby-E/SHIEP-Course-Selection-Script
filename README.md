@@ -23,9 +23,7 @@ cp config.toml.example config.toml
 
 ### 1. 账号 Cookie
 所有操作的必要前提。
-- **获取方式**：在浏览器中打开选课系统，按 `F12`，导航至 **Application** -> **Storage** -> **Cookies**。
-- **所需值**：复制 `JSESSIONID` 和 `SERVERNAME` 的值。
-- **过期处理**：若脚本返回 `302` 跳转，说明 Cookie 已过期，需在 `config.toml` 中更新。
+- **获取方式**：通过[SHIEP-Pre-Selection](https://github.com/TEraby-E/SHIEP-PreSelection-Script)获取，要保证该项目与这个项目处于同一个目录下，需要将个人信息完整填入Pre-Selection的配置项
 
 ### 2. 获取 Profile ID
 `profileId` 是查询和选课的必要参数。
@@ -36,7 +34,6 @@ cp config.toml.example config.toml
 在 Cookie 和 `profileId` 有效的情况下，使用查询工具获取具体课程信息。
 - **命令**：`uv run main.py --inquire`
 - **功能**：该命令可获取课程名称、教师信息、当前选课人数以及唯一的**课程 ID**。
-- **替代方式**：课程 ID 也可通过浏览器开发者工具（**F12**）抓包获取，但推荐使用 `--inquire` 功能以提高效率。
 - **使用方法**：将查询结果中的**课程 ID** 复制到 `USER_CONFIGS` 下的 `course_ids` 列表中用于注册。
 
 ### 4. 代理与网络环境
@@ -44,9 +41,6 @@ cp config.toml.example config.toml
 - **官方 VPN（EasyConnect）或校园网**：这些环境通常可直连服务器，需将 `USE_PROXY` 设为 `False`。
 - **第三方 VPN（如 EasierConnect）**：这些环境通常需要 SOCKS5 代理来转发流量。将 `USE_PROXY` 设为 `True`，并在 `config.toml` 的 `proxies` 字典中指定代理服务器地址和端口。
 
-### 5. API 参数
-在 `ENROLLMENT_DATA_API_PARAMS` 中配置正确的 `projectId` 和 `semesterId`。
-- **获取方式**：打开浏览器开发者工具（`F12`），切换到 **Network** 标签页，刷新选课系统页面，在捕获的请求中搜索 `projectId` 或 `semesterId` 以获取当前学期的值。
 
 ## 使用方法
 

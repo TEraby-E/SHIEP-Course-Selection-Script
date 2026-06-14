@@ -1,11 +1,69 @@
+import json
 import sys
 from pathlib import Path
 import tomllib  # Python 3.11+ standard library
 
+PRESELECTION_RESULTS_PATH = Path(__file__).parent / "../SHIEP-PreSelection-Script/results.json"
+
+
+def _load_preselection_cookies() -> dict[str, dict]:
+    """
+    Read results.json from the PreSelection script.
+    Returns {username: {"JSESSIONID": ..., "SERVERNAME": ...}} or {} on failure.
+    """
+    if not PRESELECTION_RESULTS_PATH.exists():
+        return {}
+
+    try:
+        with open(PRESELECTION_RESULTS_PATH, encoding="utf-8") as f:
+            entries = json.load(f)
+    except Exception as e:
+        print(f"[config_loader] Warning: Failed to read preselection results: {e}")
+        return {}
+
+    result = {}
+    for entry in entries:
+        username = entry.get("username")
+        cookies_list = entry.get("cookies", [])
+        if not username:
+            continue
+        cookie_map = {c["name"]: c["value"] for c in cookies_list if "name" in c and "value" in c}
+        if cookie_map:
+            result[username] = cookie_map
+
+    return result
+
+
+def _merge_preselection_cookies(config: dict) -> dict:
+    """
+    Override cookies in USER_CONFIGS and INQUIRY_USER_DATA using fresh data from results.json.
+    USER_CONFIGS entries are matched by their `username` field.
+    INQUIRY_USER_DATA is matched by looking up its `label` in USER_CONFIGS to find the username.
+    """
+    preselection = _load_preselection_cookies()
+    if not preselection:
+        return config
+
+    merged = 0
+    for user in config.get("USER_CONFIGS", []):
+        username = user.get("username")
+        if username and username in preselection:
+            user["cookies"] = preselection[username]
+            merged += 1
+
+    inquiry = config.get("INQUIRY_USER_DATA", {})
+    if preselection:
+        inquiry["cookies"] = next(iter(preselection.values()))
+        merged += 1
+
+    if merged:
+        print(f"[config_loader] Merged cookies from preselection results for {merged} user(s).")
+
+    return config
 
 
 def load_config() -> dict:
-    """Load config.toml, return empty config on error"""
+    """Load config.toml, then overlay cookies from preselection results.json"""
     config_path = Path("config.toml")
 
     if not config_path.exists():
@@ -15,7 +73,7 @@ def load_config() -> dict:
 
     try:
         with open(config_path, "rb") as f:  # TOML requires binary mode
-            return tomllib.load(f)
+            return _merge_preselection_cookies(tomllib.load(f))
     except tomllib.TOMLDecodeError as e:
         print(f"Error: config.toml is not valid TOML: {e}")
         return _empty_config()
